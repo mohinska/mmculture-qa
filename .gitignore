@@ -1,0 +1,14 @@
+# secrets / local env
+.env
+.venv/
+
+# data and heavy outputs live on Drive (CC BY-NC, not for the repo)
+data/
+asr/
+preds/
+
+# python / jupyter / os
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store

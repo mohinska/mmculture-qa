@@ -1,0 +1,13 @@
+python-dotenv
+pandas
+tqdm
+huggingface_hub
+jupyter
+
+# metrics
+jiwer
+whisper-normalizer
+bert-score
+
+# ASR on Apple Silicon
+mlx-whisper; sys_platform == "darwin"
