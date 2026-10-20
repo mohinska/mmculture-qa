@@ -14,16 +14,16 @@ Task: answer culture-specific questions about an image. The question comes as te
 
 | | Input | Pipeline |
 |---|---|---|
-| Textual VQA | image + text question | VLM, zero-shot → prompting → fine-tuning |
-| Spoken VQA, cascade | image + audio question | Whisper ASR → transcript → the Textual VQA model |
-| Spoken VQA, end-to-end | image + audio question | audio-capable multimodal model, no ASR |
+| Task 1, Spoken VQA, cascade | image + audio question | Whisper ASR → transcript → the Textual VQA model |
+| Task 1, Spoken VQA, end-to-end | image + audio question | audio-capable multimodal model, no ASR |
+| Task 2, Textual VQA | image + text question | VLM, zero-shot → prompting → fine-tuning |
 
 ## Structure
 
 ```
 common.py         shared helpers: paths, load_split(), checks, jsonl I/O, wer(), bertscore(), evaluate()
 download_data.py  downloads the English data from Hugging Face into data/
-notebooks/        00_* shared, 10_* Textual VQA, 20_* Spoken VQA
+notebooks/        00_* shared, 10_* Task 1 Spoken VQA, 20_* Task 2 Textual VQA
 results/          metrics (.json) for every run, committed
 requirements.txt
 .env.example      template for paths and HF_TOKEN
@@ -33,7 +33,7 @@ Not tracked by git (see `.gitignore`):
 
 ```
 data/     dataset              (under MMCQA_ROOT, default: repo folder)
-asr/      ASR transcripts      (under MMCQA_OUT, e.g. a shared Drive folder)
+asr/      ASR transcripts      (under MMCQA_OUT, default: same as MMCQA_ROOT)
 preds/    model answers        (under MMCQA_OUT)
 ```
 
@@ -59,8 +59,8 @@ cp .env.example .env
 
 ```bash
 python download_data.py dev                 # text + speech (default --task all)
-python download_data.py dev --task qa       # Textual VQA: qa jsonl + images
-python download_data.py dev --task sqa      # Spoken VQA: sqa jsonl + images + audio (+ qa jsonl for WER)
+python download_data.py dev --task qa       # Task 2 Textual VQA: qa jsonl + images
+python download_data.py dev --task sqa      # Task 1 Spoken VQA: sqa jsonl + images + audio (+ qa jsonl for WER)
 python download_data.py dev devtest train   # several splits
 python download_data.py --list              # list files in the HF repo
 ```
@@ -80,7 +80,7 @@ print(len(rows), check_ids(rows), check_media(rows))
 
 - Transcripts: `asr/{split}_en_{model}.jsonl`, fields `id, lang, split, model, transcript, wer`
 - Predictions: `preds/{task}_{split}_en_{model}_{prompt_id}.jsonl`, fields `id, lang, split, task, model, prompt_id, pred`,
-  where `task` is `t1_text`, `t2_speech_cascade` or `t2_speech_e2e`
+  where `task` is `t1_speech_cascade`, `t1_speech_e2e` or `t2_text`
 - Metrics: `results/<same name>.json` with `bertscore_f1/p/r`, `n`, `by_category`, `date`
 
 Use `asr_path()` and `preds_path()` from `common.py` to build these names.
@@ -117,5 +117,5 @@ Download `preds/` from the notebook output afterwards.
 
 | | Name | GitHub | Role |
 |:-:|---|---|---|
-| <img src="https://github.com/mohinska.png?size=80" width="48" alt="mohinska"/> | Maryna Ohinska | [@mohinska](https://github.com/mohinska) | Spoken VQA: ASR, cascade, end-to-end |
-| <img src="https://github.com/PechenenkoYara.png?size=80" width="48" alt="PechenenkoYara"/> | Yaryna Pechenenko | [@PechenenkoYara](https://github.com/PechenenkoYara) | Textual VQA: VLM, prompting, fine-tuning |
+| <img src="https://github.com/mohinska.png?size=80" width="48" alt="mohinska"/> | Maryna Ohinska | [@mohinska](https://github.com/mohinska) | Task 2, Textual VQA: VLM, prompting, fine-tuning |
+| <img src="https://github.com/PechenenkoYara.png?size=80" width="48" alt="PechenenkoYara"/> | Yaryna Pechenenko | [@PechenenkoYara](https://github.com/PechenenkoYara) | Task 1, Spoken VQA: ASR, cascade, end-to-end |

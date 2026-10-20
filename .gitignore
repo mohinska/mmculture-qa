@@ -2,7 +2,7 @@
 .env
 .venv/
 
-# data and heavy outputs live on Drive (CC BY-NC, not for the repo)
+# data and heavy outputs stay local (CC BY-NC, not for the repo)
 data/
 asr/
 preds/
