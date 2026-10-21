@@ -1,40 +1,158 @@
 # MMCultureQA (SemEval-2027)
 
-UCU "Artificial Intelligence" course project.
+Our system for [SemEval-2027 Task 6: MMCultureQA](https://mmcultureqa-semeval27.github.io/), built as a semester project for the "Artificial Intelligence" course at UCU.
 
-Task: answer culture-specific questions about an image. The question comes as text
-(Task 2, Textual VQA) or as speech (Task 1, Spoken VQA). Answers are short and open-ended.
+## Task
 
-- Track: English. The English questions released so far are about MENA countries, hence `mena` in data paths.
-- Metric: BERTScore F1. For Spoken VQA we also report ASR WER.
-- Task page: https://mmcultureqa-semeval27.github.io/
-- Data: https://huggingface.co/datasets/QCRI/MMCQA-SemEval27 (CC BY-NC, not stored in this repo)
+Given an image and a question about it, generate a short open-ended answer. The questions need local cultural knowledge, not only what is visible in the image.
 
-## Approach
-
-| | Input | Pipeline |
+| Task | Input | Output |
 |---|---|---|
-| Task 1, Spoken VQA, cascade | image + audio question | Whisper ASR → transcript → the Textual VQA model |
-| Task 1, Spoken VQA, end-to-end | image + audio question | audio-capable multimodal model, no ASR |
-| Task 2, Textual VQA | image + text question | VLM, zero-shot → prompting → fine-tuning |
+| **Task 1: Spoken VQA** | image + spoken question (audio) | short text answer |
+| **Task 2: Textual VQA** | image + text question | short text answer |
 
-## Structure
+- **Track:** English. The English data released so far covers the MENA region.
+- **Metric:** BERTScore F1. For Spoken VQA we also track ASR word error rate (WER).
+- **Evaluation:** CodaBench, 10–31 January 2027.
+
+## Team
+
+| | Name | GitHub | Focus |
+|:-:|---|---|---|
+| <img src="https://github.com/mohinska.png?size=80" width="48" alt="mohinska"/> | Maryna Ohinska | [@mohinska](https://github.com/mohinska) | Task 2, Textual VQA: VLM selection, prompting, fine-tuning |
+| <img src="https://github.com/PechenenkoYara.png?size=80" width="48" alt="PechenenkoYara"/> | Yaryna Pechenenko | [@PechenenkoYara](https://github.com/PechenenkoYara) | Task 1, Spoken VQA: ASR, cascade, end-to-end audio models |
+
+## Data
+
+Source: [QCRI/MMCQA-SemEval27](https://huggingface.co/datasets/QCRI/MMCQA-SemEval27) on Hugging Face.
+
+| Split | Examples | Audio | Labels |
+|---|---:|---|---|
+| train | 10,000 | synthetic (TTS) | yes |
+| dev | 1,000 | synthetic (TTS) | yes |
+| devtest | 1,000 | synthetic (TTS) | yes |
+| test | released 10.01.2027 | real recordings | no |
+
+Each example is one JSON line:
+
+| Field | Description |
+|---|---|
+| `id` | SHA-256 of the image |
+| `image` | path to the image, `images/<id>.jpg` |
+| `question` | question text (Task 2) |
+| `audio` | path to the spoken question (Task 1, replaces `question`) |
+| `answer` | gold answer |
+| `country`, `category`, `subcategory` | metadata, not in dev and test |
+
+Example (`qa/mena/dev_en.jsonl`):
+
+```json
+{"id": "065bd70c...",
+ "image": "images/065bd70c....jpg",
+ "question": "What cultural significance do lanterns like the ones shown in the image have in traditional marketplaces?",
+ "answer": "Lanterns like these often symbolize hospitality and are commonly used in traditional marketplaces for decoration and lighting, creating a warm and inviting atmosphere. They are particularly prevalent in Middle Eastern and North African cultures."}
+```
+
+Gold answers are often a full sentence or two, not a single word. That matters for BERTScore and for how we prompt.
+
+Layout after `download_data.py`:
 
 ```
-common.py         shared helpers: paths, load_split(), checks, jsonl I/O, wer(), bertscore(), evaluate()
-download_data.py  downloads the English data from Hugging Face into data/
-notebooks/        00_* shared, 10_* Task 1 Spoken VQA, 20_* Task 2 Textual VQA
-results/          metrics (.json) for every run, committed
-requirements.txt
-.env.example      template for paths and HF_TOKEN
+data/
+├── qa/mena/{train,dev,devtest}_en.jsonl     # Task 2: image + text question
+├── sqa/mena/{train,dev,devtest}_en.jsonl    # Task 1: image + audio question
+└── archives/
+    ├── images/                               # unpacked from images_mena_{split}.zip
+    └── audio/                                # unpacked from audio_mena_en_{split}.zip
 ```
 
-Not tracked by git (see `.gitignore`):
+## Pipeline
+
+```mermaid
+flowchart LR
+    SQA["sqa_*<br/>image + audio"] -->|audio| ASR["ASR<br/>Whisper"]
+    ASR --> TR["transcript"]
+    TR --> VLM1["VLM"]
+    SQA -->|image| VLM1
+    VLM1 --> P1["Task 1 cascade<br/>answers"]
+
+    SQA -->|image + audio| E2E["audio-capable<br/>multimodal model"]
+    E2E --> P2["Task 1 end-to-end<br/>answers"]
+
+    QA["qa_*<br/>image + text"] --> VLM2["VLM"]
+    VLM2 --> P3["Task 2<br/>answers"]
+
+    P1 --> EV["BERTScore F1<br/>overall and per category"]
+    P2 --> EV
+    P3 --> EV
+    ASR -.->|vs text question| WER["WER"]
+
+    classDef t1 fill:#fce4ec,stroke:#d81b60
+    classDef t2 fill:#e3f2fd,stroke:#1e88e5
+    class SQA,ASR,TR,VLM1,P1,E2E,P2 t1
+    class QA,VLM2,P3 t2
+```
+
+Task 1 is solved in two ways, so we can compare them:
+
+| Approach | How | Why |
+|---|---|---|
+| **Cascade** | Whisper turns the audio into text, then the Task 2 VLM answers | simple and reuses the Task 2 model, but ASR errors (names, dishes, places) carry over into the answer |
+| **End-to-end** | one multimodal model takes the image and the audio directly | no ASR step to break, so it may handle cultural terms better |
+
+Comparing either one with Task 2 on the same examples shows how much is lost to speech.
+
+## Baselines
+
+To be decided after a zero-shot comparison on a 200-example dev subset. Candidates:
+
+| Component | Candidates | Where it runs |
+|---|---|---|
+| VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
+| ASR (Task 1 cascade) | Whisper large-v3-turbo | Mac (`mlx-whisper`) |
+| End-to-end audio model (Task 1) | Qwen2.5-Omni, Gemini | Kaggle GPU / Gemini API |
+| Upper reference | Gemini (closed model) | Gemini API |
+
+Results:
+
+| System | dev BERTScore F1 | dev WER |
+|---|---:|---:|
+| Task 2: VLM zero-shot | – | – |
+| Task 1: Whisper + VLM (cascade) | – | – |
+| Task 1: end-to-end | – | – |
+
+## Plan
+
+```mermaid
+flowchart LR
+    A["Zero-shot<br/>baselines"] --> B["Prompting<br/>and few-shot"]
+    B --> C["LoRA fine-tuning<br/>on train"]
+    C --> D["Final configs<br/>and test submission"]
+```
+
+For Spoken VQA, the train and dev audio is synthetic while the test audio is real, so later work includes audio augmentation (noise, speed, reverb) and testing on our own recordings.
+
+## Repository
 
 ```
-data/     dataset              (under MMCQA_ROOT, default: repo folder)
-asr/      ASR transcripts      (under MMCQA_OUT, default: same as MMCQA_ROOT)
-preds/    model answers        (under MMCQA_OUT)
+mmculture-qa/
+├── common.py             # shared helpers
+│                         #   paths, load_split(), check_ids(), check_media()
+│                         #   load_jsonl() / save_jsonl()
+│                         #   wer(), bertscore(), evaluate()
+├── download_data.py      # English data from Hugging Face → data/
+├── notebooks/
+│   ├── 00_*.ipynb        # shared: data analysis, checks
+│   ├── 10_*.ipynb        # Task 1, Spoken VQA
+│   └── 20_*.ipynb        # Task 2, Textual VQA
+├── results/              # metrics (.json) for every run
+├── requirements.txt
+├── .env.example          # template for paths and HF_TOKEN
+│
+│   local directories:
+├── data/                 # dataset
+├── asr/                  # ASR transcripts
+└── preds/                # model answers
 ```
 
 ## Setup
@@ -47,55 +165,39 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-`.env`:
-
-| Variable | Meaning |
+| `.env` variable | Meaning |
 |---|---|
-| `HF_TOKEN` | Hugging Face read token (https://huggingface.co/settings/tokens) |
-| `MMCQA_ROOT` | folder with `data/`. Empty = repo folder |
+| `HF_TOKEN` | Hugging Face read token ([settings/tokens](https://huggingface.co/settings/tokens)) |
+| `MMCQA_ROOT` | folder that contains `data/`. Empty = repo folder |
 | `MMCQA_OUT` | where `asr/` and `preds/` are written. Empty = same as `MMCQA_ROOT` |
 
-## Data
+Download data:
 
 ```bash
-python download_data.py dev                 # text + speech (default --task all)
-python download_data.py dev --task qa       # Task 2 Textual VQA: qa jsonl + images
-python download_data.py dev --task sqa      # Task 1 Spoken VQA: sqa jsonl + images + audio (+ qa jsonl for WER)
-python download_data.py dev devtest train   # several splits
-python download_data.py --list              # list files in the HF repo
+python download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--list]
 ```
 
-Splits: train 10k, dev 1k, devtest 1k. Audio in train and dev is synthetic (TTS);
-the test set will have real recordings and no `answer` / `country` / `category` fields.
+| Argument | Values | Default | Meaning |
+|---|---|---|---|
+| `SPLITS` | `train`, `dev`, `devtest` (one or more) | `dev` | which splits to download |
+| `--task` | `qa` | `all` | Task 2: qa jsonl + images |
+| | `sqa` | | Task 1: sqa jsonl + images + audio (+ qa jsonl as WER reference) |
+| | `all` | | both tasks |
+| `--list` | | off | only list files in the dataset repo, download nothing |
 
-Check that data is in place:
+## Output formats
 
-```python
-from common import *
-rows = load_split("sqa", "dev")
-print(len(rows), check_ids(rows), check_media(rows))
-```
+| File | Fields |
+|---|---|
+| `asr/{split}_en_{model}.jsonl` | `id, lang, split, model, transcript, wer` |
+| `preds/{task}_{split}_en_{model}_{prompt_id}.jsonl` | `id, lang, split, task, model, prompt_id, pred` |
+| `results/<same name>.json` | `bertscore_f1, bertscore_p, bertscore_r, n, by_category, date` |
 
-## File formats
+`task` is one of `t1_speech_cascade`, `t1_speech_e2e`, `t2_text`. BERTScore uses `roberta-large` without baseline rescaling.
 
-- Transcripts: `asr/{split}_en_{model}.jsonl`, fields `id, lang, split, model, transcript, wer`
-- Predictions: `preds/{task}_{split}_en_{model}_{prompt_id}.jsonl`, fields `id, lang, split, task, model, prompt_id, pred`,
-  where `task` is `t1_speech_cascade`, `t1_speech_e2e` or `t2_text`
-- Metrics: `results/<same name>.json` with `bertscore_f1/p/r`, `n`, `by_category`, `date`
+## Running on Kaggle
 
-Use `asr_path()` and `preds_path()` from `common.py` to build these names.
-
-## Rules
-
-- Never edit `data/` or someone else's files in `asr/` and `preds/`.
-- New experiment = new file. Nothing gets overwritten.
-- Quick runs: `load_split(..., n=200, seed=0)`, the same subset for both tasks.
-- Changing `common.py`: pull first, separate commit, tell the other person.
-- Notebook outputs and comments in English. Clear large outputs before committing.
-
-## Kaggle (GPU runs)
-
-Add `HF_TOKEN` in Add-ons → Secrets, then in the notebook:
+Add `HF_TOKEN` in Add-ons → Secrets, then:
 
 ```python
 import os
@@ -108,14 +210,5 @@ os.environ["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 %cd mmculture-qa
 !pip install -q -r requirements.txt
 %env MMCQA_OUT=/kaggle/working
-!python download_data.py dev --task sqa
+!python download_data.py dev --task qa
 ```
-
-Download `preds/` from the notebook output afterwards.
-
-## Team
-
-| | Name | GitHub | Role |
-|:-:|---|---|---|
-| <img src="https://github.com/mohinska.png?size=80" width="48" alt="mohinska"/> | Maryna Ohinska | [@mohinska](https://github.com/mohinska) | Task 2, Textual VQA: VLM, prompting, fine-tuning |
-| <img src="https://github.com/PechenenkoYara.png?size=80" width="48" alt="PechenenkoYara"/> | Yaryna Pechenenko | [@PechenenkoYara](https://github.com/PechenenkoYara) | Task 1, Spoken VQA: ASR, cascade, end-to-end |
