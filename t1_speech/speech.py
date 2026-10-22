@@ -9,8 +9,11 @@ import sys
 import time
 from pathlib import Path
 
-from common import (LANG, RESULTS_DIR, asr_path, load_jsonl, load_split,
-                    normalize, save_jsonl, split_path, wer, wer_one)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
+
+from data import (LANG, RESULTS_DIR, asr_path, load_jsonl, load_split,
+                  save_jsonl, split_path)
+from metrics import normalize, wer, wer_one
 
 ASR_MODELS = {
     "whisper-large-v3-turbo": {"mlx": "mlx-community/whisper-large-v3-turbo",
