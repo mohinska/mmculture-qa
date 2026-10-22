@@ -1,11 +1,11 @@
 """Download the English data of MMCQA-SemEval27 from Hugging Face into $MMCQA_ROOT/data.
 
 Usage:
-    python download_data.py                          # dev, text + speech
-    python download_data.py dev devtest --task qa    # text VQA only: qa jsonl + images
-    python download_data.py dev --task sqa           # spoken VQA: sqa jsonl + audio + images
-    python download_data.py train devtest --task qa --no-media   # jsonl only, no zips
-    python download_data.py --list                   # print repo files, download nothing
+    python shared/download_data.py                          # dev, text + speech
+    python shared/download_data.py dev devtest --task qa    # text VQA only: qa jsonl + images
+    python shared/download_data.py dev --task sqa           # spoken VQA: sqa jsonl + audio + images
+    python shared/download_data.py train devtest --task qa --no-media   # jsonl only, no zips
+    python shared/download_data.py --list                   # print repo files, download nothing
 
 --task sqa also fetches the qa jsonl: its `question` is the reference for WER.
 
@@ -20,7 +20,7 @@ from pathlib import Path
 
 from huggingface_hub import hf_hub_download, list_repo_files
 
-from common import DATA
+from data import DATA
 
 REPO_ID = "QCRI/MMCQA-SemEval27"
 

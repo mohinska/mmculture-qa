@@ -53,7 +53,7 @@ Example (`qa/mena/dev_en.jsonl`):
  "answer": "Lanterns like these often symbolize hospitality and are commonly used in traditional marketplaces for decoration and lighting, creating a warm and inviting atmosphere. They are particularly prevalent in Middle Eastern and North African cultures."}
 ```
 
-Gold answers are often a full sentence or two (median 24 words on dev), not a single word. That matters for BERTScore and for how we prompt. Details: `notebooks/00_EDA.ipynb`.
+Gold answers are often a full sentence or two (median 24 words on dev), not a single word. That matters for BERTScore and for how we prompt. Details: `shared/notebooks/00_EDA.ipynb`.
 
 Layout after `download_data.py`:
 
@@ -135,19 +135,20 @@ For Spoken VQA, the train and dev audio is synthetic while the test audio is rea
 
 ```
 mmculture-qa/
-├── common.py             # shared helpers
-│                         #   paths, load_split(), check_ids(), check_media()
-│                         #   load_jsonl() / save_jsonl()
-│                         #   wer(), wer_one(), bertscore(), evaluate()
-├── download_data.py      # English data from Hugging Face → data/
+├── shared/               # used by both tasks
+│   ├── data.py           #   paths, load_split(), load_jsonl() / save_jsonl(),
+│   │                     #   check_ids(), check_media()
+│   ├── metrics.py        #   wer(), wer_one(), bertscore(), evaluate()
+│   ├── download_data.py  #   English data from Hugging Face → data/
+│   └── notebooks/
+│       └── 00_EDA.ipynb  #   answer length / style, countries, categories
 ├── t2_text/              # Task 2, Textual VQA
 │   ├── prompts.py        #   build_prompt(), prompts: plain, gold_style_v1
-│   └── run_vlm.py        #   VLM on a dev subset → preds/ + BERTScore (Kaggle)
+│   ├── run_vlm.py        #   VLM on a dev subset → preds/ + BERTScore (Kaggle)
+│   └── notebooks/
+│       └── 01_baselines.ipynb  # zero-shot baselines on Kaggle
 ├── t1_speech/            # Task 1, Spoken VQA (planned)
-├── notebooks/
-│   ├── 00_EDA.ipynb      # shared: answer length / style, countries, categories
-│   ├── 10_*.ipynb        # Task 1, Spoken VQA (planned)
-│   └── 20_*.ipynb        # Task 2, Textual VQA (planned)
+│   └── notebooks/
 ├── results/              # metrics (.json) for every run, data_stats.json from EDA
 ├── requirements.txt
 ├── .env.example          # template for paths and HF_TOKEN
@@ -177,7 +178,7 @@ cp .env.example .env
 Download data:
 
 ```bash
-python download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--no-media] [--list]
+python shared/download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--no-media] [--list]
 ```
 
 | Argument | Values | Default | Meaning |
@@ -214,7 +215,7 @@ os.environ["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 %cd mmculture-qa
 !pip install -q -r requirements.txt
 %env MMCQA_OUT=/kaggle/working
-!python download_data.py dev --task qa
+!python shared/download_data.py dev --task qa
 !pip install -q -U transformers   # Qwen3-VL needs a recent version
 !python t2_text/run_vlm.py --model Qwen/Qwen3-VL-4B-Instruct --prompt-id gold_style_v1 --n 5
 ```
