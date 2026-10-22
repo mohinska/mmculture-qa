@@ -9,8 +9,11 @@ jiwer
 whisper-normalizer
 bert-score
 
-# ASR on Apple Silicon
-mlx-whisper; sys_platform == "darwin"
+# ASR: mlx on Apple Silicon, faster-whisper (CPU int8) elsewhere, e.g. Intel Mac
+mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
+faster-whisper
+soundfile
+scipy
 
 # VLM inference on Kaggle (torch is preinstalled there)
 transformers

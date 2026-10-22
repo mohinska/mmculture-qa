@@ -109,7 +109,7 @@ To be decided after a zero-shot comparison on a 200-example dev subset. Candidat
 | Component | Candidates | Where it runs |
 |---|---|---|
 | VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
-| ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper`) |
+| ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper` on Apple Silicon, `faster-whisper` on CPU) or Kaggle GPU |
 | End-to-end audio model (Task 1) | Qwen2.5-Omni | Kaggle GPU |
 
 Results:
