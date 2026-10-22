@@ -1,11 +1,4 @@
-"""T1_Speech helpers (Yaryna): ASR, cascade inputs, speech-vs-text analysis.
-
-Used by notebooks/1*. Shared paths and metrics come from common.py.
-
-    from speech import run_asr, asr_summary
-    path = run_asr("dev")                       # -> asr/dev_en_whisper-large-v3-turbo.jsonl
-    asr_summary(path)                           # -> results/asr_dev_en_whisper-large-v3-turbo.json
-"""
+"""T1_Speech: ASR, cascade inputs and speech-vs-text analysis."""
 from __future__ import annotations
 
 import json
@@ -19,11 +12,6 @@ from pathlib import Path
 from common import (LANG, RESULTS_DIR, asr_path, load_jsonl, load_split,
                     normalize, save_jsonl, split_path, wer, wer_one)
 
-# ---------------------------------------------------------------- ASR models
-
-# short name (used in file names) -> checkpoints per backend
-# mlx: Apple Silicon only. ct2: faster-whisper (CTranslate2), CPU int8, e.g. Intel Mac.
-# hf: transformers pipeline, CUDA (Kaggle).
 ASR_MODELS = {
     "whisper-large-v3-turbo": {"mlx": "mlx-community/whisper-large-v3-turbo",
                                "ct2": "large-v3-turbo",
@@ -47,7 +35,7 @@ def _has(module: str) -> bool:
 
 
 def default_backend() -> str:
-    """mlx on Apple Silicon, hf on a CUDA GPU (Kaggle), faster-whisper on CPU otherwise."""
+    """mlx on Apple Silicon, hf on a CUDA GPU, ct2 (faster-whisper) on CPU."""
     if sys.platform == "darwin" and platform.machine() == "arm64" and _has("mlx_whisper"):
         return "mlx"
     if _has("torch") and _has("transformers"):
@@ -86,7 +74,7 @@ def _ct2_model(repo: str):
 
 
 def _load_16k(path: str):
-    """wav -> float32 mono 16 kHz. faster-whisper's own decoder (PyAV) breaks with av>=15."""
+    """Reads a wav file as float32 mono at 16 kHz."""
     from math import gcd
 
     import soundfile as sf
@@ -102,13 +90,13 @@ def _load_16k(path: str):
 def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
                backend: str | None = None, initial_prompt: str | None = None,
                batch_size: int = 16) -> list[str]:
-    """Audio files -> English transcripts, same order.
+    """Audio files -> English transcripts, same order. Greedy decoding on all backends.
 
-    initial_prompt: text Whisper sees as "previous context" (e.g. a list of
-    MENA place names / dishes). Supported on the mlx and ct2 backends.
+    initial_prompt: context text for the decoder, e.g. a list of place names
+    (mlx and ct2 backends only).
     """
     backend = backend or default_backend()
-    repo = ASR_MODELS.get(model, {}).get(backend, model)  # unknown name = raw checkpoint id
+    repo = ASR_MODELS.get(model, {}).get(backend, model)
 
     if backend == "mlx":
         import mlx_whisper
@@ -138,14 +126,12 @@ def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
     raise ValueError(f"backend must be 'mlx', 'ct2' or 'hf', got {backend!r}")
 
 
-# ---------------------------------------------------------------- run + score
-
 def _key(row: dict) -> tuple:
     return (row["id"], row.get("row_idx"))
 
 
 def wer_refs(split: str) -> dict:
-    """id -> text question from qa_* (the WER reference). Empty for the test split."""
+    """id -> text question from qa (the WER reference)."""
     if not split_path("qa", split).exists():
         return {}
     return {r["id"]: r["question"] for r in load_split("qa", split)}
@@ -154,11 +140,10 @@ def wer_refs(split: str) -> dict:
 def run_asr(split: str = "dev", model: str = DEFAULT_ASR, n: int | None = None,
             seed: int = 0, backend: str | None = None, initial_prompt: str | None = None,
             tag: str | None = None, batch_size: int = 16) -> Path:
-    """Transcribe the sqa split and write asr/{split}_en_{tag or model}.jsonl.
+    """Transcribes the sqa split into asr/{split}_en_{tag or model}.jsonl.
 
-    Resumable: rows already in the output file are skipped, results are
-    appended after every batch. Use `tag` for variants, e.g.
-    tag="whisper-large-v3-turbo+names" when you pass an initial_prompt.
+    Resumable: rows already in the file are skipped, results are appended per batch.
+    A run with initial_prompt needs its own tag, e.g. "whisper-large-v3-turbo+names".
     """
     if initial_prompt and not tag:
         raise ValueError("initial_prompt changes the experiment: pass a tag, so it gets its own file")
@@ -190,7 +175,7 @@ def run_asr(split: str = "dev", model: str = DEFAULT_ASR, n: int | None = None,
 
 
 def asr_summary(path: str | Path, split: str = "dev") -> dict:
-    """Corpus WER + share of perfect transcripts; writes results/asr_<name>.json."""
+    """Corpus and mean WER, share of perfect transcripts; writes results/asr_<name>.json."""
     path = Path(path)
     recs = load_jsonl(path)
     refs = wer_refs(split)
@@ -211,20 +196,13 @@ def asr_summary(path: str | Path, split: str = "dev") -> dict:
     return res
 
 
-# ---------------------------------------------------------------- cascade input
-
 def cascade_inputs(asr_file: str | Path, split: str = "dev") -> list[dict]:
-    """qa rows with `question` replaced by the ASR transcript (same ids, same images).
-
-    Keeps the original text in `question_text` for analysis.
-    """
+    """qa rows with `question` replaced by the transcript; the original is kept in `question_text`."""
     asr = {r["id"]: r["transcript"] for r in load_jsonl(asr_file)}
     base = load_split("qa" if split_path("qa", split).exists() else "sqa", split)
     return [{**r, "question_text": r.get("question"), "question": asr[r["id"]]}
             for r in base if r["id"] in asr]
 
-
-# ---------------------------------------------------------------- analysis
 
 WER_BINS = [(0.0, 0.0, "0"), (0.0, 0.1, "(0, .10]"), (0.1, 0.25, "(.10, .25]"),
             (0.25, 0.5, "(.25, .50]"), (0.5, float("inf"), "> .50")]
@@ -240,10 +218,9 @@ def wer_bin(w: float) -> str:
 
 
 def join_t1_t2(asr_file, speech_preds, text_preds, split: str = "dev"):
-    """One row per id present in both runs: WER, both BERTScores, both answers.
+    """One row per id scored in both runs: WER, both answers, both BERTScores, delta.
 
-    speech_preds / text_preds: preds/*.jsonl that went through evaluate(),
-    so *.scores.jsonl exists next to them.
+    Both preds files must have gone through evaluate() (needs *.scores.jsonl).
     """
     import pandas as pd
 
@@ -279,7 +256,7 @@ def join_t1_t2(asr_file, speech_preds, text_preds, split: str = "dev"):
 
 
 def wer_bin_table(df):
-    """Mean BERTScore F1 for text vs speech per WER bin (bins in fixed order)."""
+    """Mean BERTScore F1 for text vs speech per WER bin."""
     order = [b[2] for b in WER_BINS]
     t = (df.groupby("wer_bin")
            .agg(n=("id", "size"), f1_text=("f1_text", "mean"),
@@ -293,8 +270,7 @@ _CAP = re.compile(r"\b[A-Z][a-zA-Z'\-]*[a-zA-Z]")
 
 
 def missed_names(ref: str, hyp: str) -> list[str]:
-    """Capitalized words of the reference (names, places, dishes) that the
-    transcript lost. Skips the first word of the sentence."""
+    """Capitalized words of the reference (except the first word) missing from the transcript."""
     hyp_words = set(normalize(hyp).split())
     out = []
     for m in _CAP.finditer(ref or ""):
