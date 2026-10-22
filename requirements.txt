@@ -11,3 +11,8 @@ bert-score
 
 # ASR on Apple Silicon
 mlx-whisper; sys_platform == "darwin"
+
+# VLM inference on Kaggle (torch is preinstalled there)
+transformers
+accelerate
+pillow

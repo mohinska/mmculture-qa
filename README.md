@@ -110,8 +110,7 @@ To be decided after a zero-shot comparison on a 200-example dev subset. Candidat
 |---|---|---|
 | VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
 | ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper`) |
-| End-to-end audio model (Task 1) | Qwen2.5-Omni, Gemini | Kaggle GPU / Gemini API |
-| Upper reference | Gemini (closed model) | Gemini API |
+| End-to-end audio model (Task 1) | Qwen2.5-Omni | Kaggle GPU |
 
 Results:
 
@@ -141,6 +140,10 @@ mmculture-qa/
 │                         #   load_jsonl() / save_jsonl()
 │                         #   wer(), wer_one(), bertscore(), evaluate()
 ├── download_data.py      # English data from Hugging Face → data/
+├── t2_text/              # Task 2, Textual VQA
+│   ├── prompts.py        #   build_prompt(), prompts: plain, gold_style_v1
+│   └── run_vlm.py        #   VLM on a dev subset → preds/ + BERTScore (Kaggle)
+├── t1_speech/            # Task 1, Spoken VQA (planned)
 ├── notebooks/
 │   ├── 00_EDA.ipynb      # shared: answer length / style, countries, categories
 │   ├── 10_*.ipynb        # Task 1, Spoken VQA (planned)
@@ -212,4 +215,8 @@ os.environ["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 !pip install -q -r requirements.txt
 %env MMCQA_OUT=/kaggle/working
 !python download_data.py dev --task qa
+!pip install -q -U transformers   # Qwen3-VL needs a recent version
+!python t2_text/run_vlm.py --model Qwen/Qwen3-VL-4B-Instruct --prompt-id gold_style_v1 --n 5
 ```
+
+`run_vlm.py` arguments: `--model` (HF id), `--prompt-id` (`plain` | `gold_style_v1`), `--split` (default `dev`), `--n` (subset size, seed 0; default 200, `0` = full split). It is resumable: rerun the same command after a crash.

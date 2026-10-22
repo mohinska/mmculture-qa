@@ -1,6 +1,7 @@
 {
   "rows":{
-    "dev":1000
+    "dev":1000,
+    "train":10000
   },
   "answer_words":{
     "dev":{
@@ -12,6 +13,16 @@
       "50%":24.0,
       "75%":30.0,
       "max":63.0
+    },
+    "train":{
+      "count":10000.0,
+      "mean":24.5,
+      "std":9.1,
+      "min":1.0,
+      "25%":18.0,
+      "50%":24.0,
+      "75%":30.0,
+      "max":78.0
     }
   },
   "style":{
@@ -21,6 +32,14 @@
       "full_sentence":0.769,
       "mentions_image":0.263,
       "hedging":0.25,
+      "yes_no":0.0
+    },
+    "train":{
+      "starts_with_The":0.952,
+      "ends_with_period":0.993,
+      "full_sentence":0.763,
+      "mentions_image":0.258,
+      "hedging":0.217,
       "yes_no":0.0
     }
   }
