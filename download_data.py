@@ -4,6 +4,7 @@ Usage:
     python download_data.py                          # dev, text + speech
     python download_data.py dev devtest --task qa    # text VQA only: qa jsonl + images
     python download_data.py dev --task sqa           # spoken VQA: sqa jsonl + audio + images
+    python download_data.py train devtest --task qa --no-media   # jsonl only, no zips
     python download_data.py --list                   # print repo files, download nothing
 
 --task sqa also fetches the qa jsonl: its `question` is the reference for WER.
@@ -41,6 +42,7 @@ def main() -> None:
     ap.add_argument("splits", nargs="*", default=["dev"], help="train / dev / devtest (default: dev)")
     ap.add_argument("--task", choices=["qa", "sqa", "all"], default="all",
                     help="qa = text VQA, sqa = spoken VQA, all = both (default)")
+    ap.add_argument("--no-media", action="store_true", help="jsonl only, skip image / audio zips")
     ap.add_argument("--list", action="store_true", help="only print files in the HF repo")
     args = ap.parse_args()
 
@@ -53,6 +55,8 @@ def main() -> None:
 
     wanted = sorted({f for s in args.splits for p in patterns(s, args.task)
                      for f in files if fnmatch.fnmatch(f, p)})
+    if args.no_media:
+        wanted = [f for f in wanted if not f.endswith(".zip")]
     if not wanted:
         sys.exit(f"Nothing matched for splits={args.splits}, task={args.task}. "
                  "Run with --list and fix patterns().")

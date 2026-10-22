@@ -53,7 +53,7 @@ Example (`qa/mena/dev_en.jsonl`):
  "answer": "Lanterns like these often symbolize hospitality and are commonly used in traditional marketplaces for decoration and lighting, creating a warm and inviting atmosphere. They are particularly prevalent in Middle Eastern and North African cultures."}
 ```
 
-Gold answers are often a full sentence or two, not a single word. That matters for BERTScore and for how we prompt.
+Gold answers are often a full sentence or two (median 24 words on dev), not a single word. That matters for BERTScore and for how we prompt. Details: `notebooks/00_EDA.ipynb`.
 
 Layout after `download_data.py`:
 
@@ -87,8 +87,8 @@ flowchart LR
     P3 --> EV
     ASR -.->|vs text question| WER["WER"]
 
-    classDef t1 fill:#fce4ec,stroke:#d81b60
-    classDef t2 fill:#e3f2fd,stroke:#1e88e5
+    classDef t1 fill:#c2185b,stroke:#880e4f,color:#ffffff
+    classDef t2 fill:#1565c0,stroke:#0d47a1,color:#ffffff
     class SQA,ASR,TR,VLM1,P1,E2E,P2 t1
     class QA,VLM2,P3 t2
 ```
@@ -109,7 +109,7 @@ To be decided after a zero-shot comparison on a 200-example dev subset. Candidat
 | Component | Candidates | Where it runs |
 |---|---|---|
 | VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
-| ASR (Task 1 cascade) | Whisper large-v3-turbo | Mac (`mlx-whisper`) |
+| ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper`) |
 | End-to-end audio model (Task 1) | Qwen2.5-Omni, Gemini | Kaggle GPU / Gemini API |
 | Upper reference | Gemini (closed model) | Gemini API |
 
@@ -139,13 +139,13 @@ mmculture-qa/
 ├── common.py             # shared helpers
 │                         #   paths, load_split(), check_ids(), check_media()
 │                         #   load_jsonl() / save_jsonl()
-│                         #   wer(), bertscore(), evaluate()
+│                         #   wer(), wer_one(), bertscore(), evaluate()
 ├── download_data.py      # English data from Hugging Face → data/
 ├── notebooks/
-│   ├── 00_*.ipynb        # shared: data analysis, checks
-│   ├── 10_*.ipynb        # Task 1, Spoken VQA
-│   └── 20_*.ipynb        # Task 2, Textual VQA
-├── results/              # metrics (.json) for every run
+│   ├── 00_EDA.ipynb      # shared: answer length / style, countries, categories
+│   ├── 10_*.ipynb        # Task 1, Spoken VQA (planned)
+│   └── 20_*.ipynb        # Task 2, Textual VQA (planned)
+├── results/              # metrics (.json) for every run, data_stats.json from EDA
 ├── requirements.txt
 ├── .env.example          # template for paths and HF_TOKEN
 │
@@ -174,7 +174,7 @@ cp .env.example .env
 Download data:
 
 ```bash
-python download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--list]
+python download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--no-media] [--list]
 ```
 
 | Argument | Values | Default | Meaning |
@@ -183,9 +183,10 @@ python download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--list]
 | `--task` | `qa` | `all` | Task 2: qa jsonl + images |
 | | `sqa` | | Task 1: sqa jsonl + images + audio (+ qa jsonl as WER reference) |
 | | `all` | | both tasks |
+| `--no-media` | | off | jsonl only, skip image / audio zips (enough for EDA) |
 | `--list` | | off | only list files in the dataset repo, download nothing |
 
-## Output formats
+## Outputs
 
 | File | Fields |
 |---|---|
