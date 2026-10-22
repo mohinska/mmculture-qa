@@ -7,14 +7,15 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
 
 import torch
 from PIL import Image
 from tqdm import tqdm
 from transformers import AutoModelForImageTextToText, AutoProcessor
 
-from common import evaluate, load_jsonl, load_split, preds_path, save_jsonl
+from data import load_jsonl, load_split, preds_path, save_jsonl
+from metrics import evaluate
 from prompts import build_prompt
 
 ap = argparse.ArgumentParser()
