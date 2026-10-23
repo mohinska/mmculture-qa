@@ -229,7 +229,7 @@ def join_t1_t2(asr_file, speech_preds, text_preds, split: str = "dev"):
 
     def scored(p):
         p = Path(p)
-        preds = {r["id"]: r["pred"] for r in load_jsonl(p)}
+        preds = {r["id"]: r["answer"] for r in load_jsonl(p)}
         scores = {r["id"]: r["f1"] for r in load_jsonl(p.with_suffix(".scores.jsonl"))}
         return preds, scores
 
