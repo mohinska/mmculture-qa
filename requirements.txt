@@ -4,10 +4,19 @@ tqdm
 huggingface_hub
 jupyter
 
-# metrics
+# WER
 jiwer
 whisper-normalizer
-bert-score
+
+# official scorer (shared/official_scorer/): versions of the leaderboard worker, so scores match.
+# torch >= 2.6 is required for the mmBERT checkpoint (upstream pins 2.6.0, but that has no wheels for
+# Python 3.14). Apple Silicon only (no torch 2.6 wheels for Intel Macs); Linux, Colab and Kaggle have their own torch.
+torch>=2.6; sys_platform == "darwin" and platform_machine == "arm64"
+transformers==4.57.6
+bert_score==0.3.12
+sacrebleu==2.5.1
+sentencepiece
+rouge-score
 
 # ASR: mlx on Apple Silicon, faster-whisper (CPU int8) elsewhere, e.g. Intel Mac
 mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
@@ -15,7 +24,10 @@ faster-whisper
 soundfile
 scipy
 
-# VLM inference on Kaggle (torch is preinstalled there)
-transformers
+# VLM inference on Kaggle / Colab (torch is preinstalled there)
 accelerate
 pillow
+# Qwen2.5-Omni and 4-bit loading; they do not install on macOS
+bitsandbytes; sys_platform == "linux"
+qwen-omni-utils; sys_platform == "linux"
+torchvision; sys_platform == "linux"

@@ -1,10 +1,16 @@
-"""Metrics for MMCultureQA: WER (ASR) and BERTScore (answers)."""
+"""Metrics for MMCultureQA: WER (ASR) and the official scorer (answers)."""
 from __future__ import annotations
 
 import json
+import sys
+import tempfile
 from pathlib import Path
 
-from data import LANG, RESULTS_DIR, load_jsonl, load_split, save_jsonl
+from data import LANG, RESULTS_DIR, load_jsonl, load_split, require_answers, save_jsonl
+
+# BERTScore, BLEU, ROUGE-L and coverage come from the official scorer, bundled unmodified in
+# shared/official_scorer/ (needs requirements.txt, see README). Do not re-implement them here.
+OFFICIAL = Path(__file__).resolve().parent / "official_scorer"
 
 # ---------------------------------------------------------------- metrics
 
@@ -39,78 +45,78 @@ def wer(hyps: list[str], refs: list[str]) -> float:
     return jiwer.wer([r for _, r in pairs], [h for h, _ in pairs])
 
 
-# BERTScore settings: fixed here and nowhere else.
-# TODO: check against the official scorer before the first submission:
-# https://github.com/mmcultureqa-semeval27/mmcultureqa/tree/main/scorer
-BERTSCORE_MODEL = "roberta-large"   # bert_score default for lang="en"
-BERTSCORE_RESCALE = False           # True spreads scores out, but must match the official setting
-BERTSCORE_IDF = False
-
-_scorer = None
-
-
-def _bertscorer():
-    global _scorer
-    if _scorer is None:
-        import torch
-        from bert_score import BERTScorer
-        device = "cuda" if torch.cuda.is_available() else (
-            "mps" if torch.backends.mps.is_available() else "cpu")
-        _scorer = BERTScorer(model_type=BERTSCORE_MODEL, lang=LANG, idf=BERTSCORE_IDF,
-                             rescale_with_baseline=BERTSCORE_RESCALE, device=device)
-    return _scorer
-
-
-def bertscore_items(preds: list[str], refs: list[str], batch_size: int = 32) -> list[dict]:
-    """Per-item BERTScore: [{"p", "r", "f1"}, ...] in the input order."""
-    if len(preds) != len(refs):
-        raise ValueError(f"len(preds)={len(preds)} != len(refs)={len(refs)}")
-    if not preds:
-        return []
-    P, R, F = _bertscorer().score([p or "" for p in preds], [r or "" for r in refs],
-                                  batch_size=batch_size)
-    return [{"p": p, "r": r, "f1": f} for p, r, f in zip(P.tolist(), R.tolist(), F.tolist())]
-
-
-def bertscore(preds: list[str], refs: list[str]) -> dict:
-    """Returns mean {"precision", "recall", "f1"} over all pairs."""
-    items = bertscore_items(preds, refs)
-    n = len(items) or 1
-    return {"precision": sum(x["p"] for x in items) / n,
-            "recall": sum(x["r"] for x in items) / n,
-            "f1": sum(x["f1"] for x in items) / n}
+def _official():
+    """Imports the bundled leaderboard scorer lazily, so WER users need no torch."""
+    if not (OFFICIAL / "backbone.py").exists():
+        raise FileNotFoundError(f"{OFFICIAL}/backbone.py not found: copy the upstream scorer/ there")
+    sys.path.insert(0, str(OFFICIAL))
+    import backbone
+    import score
+    score.pin_weights(backbone.HUB_REVISION)   # same weights as the leaderboard
+    return backbone
 
 
 def evaluate(preds_path: str | Path, split: str = "dev", group_by: str = "category") -> dict:
-    """Reads preds, joins them with gold answers (qa split) by id, computes BERTScore
-    overall and per `group_by` field (skipped if gold has no such field),
-    writes results/<preds name>.json and per-item scores next to the preds file."""
+    """Scores a preds file ({"id", "answer", "lang"} rows) against the gold answers of `split` (qa task)
+    with the official scorer. Gold is cut to the ids present in the preds file (subsets).
+
+    Writes results/<preds name>.json (the official result plus flat keys) and per-item
+    scores next to the preds file (<preds name>.scores.jsonl, fields id, p, r, f1).
+    An empty prediction scores 0 everywhere, as on the leaderboard."""
     import datetime as dt
 
     preds_path = Path(preds_path)
-    preds = {r["id"]: r for r in load_jsonl(preds_path)}
+    rows = load_jsonl(preds_path)
+    require_answers(rows, preds_path)
+    preds = {r["id"]: r for r in rows}
     gold = {r["id"]: r for r in load_split("qa", split)}
+    ids = sorted(i for i in preds if i in gold)
+    if not ids:
+        raise ValueError(f"{preds_path.name}: none of its {len(preds)} ids is in the `{split}` split "
+                         "(wrong split?)")
+    if any("answer" not in gold[i] for i in ids):
+        raise ValueError(f"the `{split}` split has no gold answers; score on dev")
+    n_missing = len([i for i in gold if i not in preds])    # gold ids without a prediction
 
-    ids = [i for i in preds if i in gold]
-    missing = [i for i in gold if i not in preds]
-    items = bertscore_items([preds[i]["pred"] for i in ids], [gold[i]["answer"] for i in ids])
+    bb = _official()
+    scorer = bb.get_scorer()
+    seen, orig = {}, scorer.score
 
-    res = {
-        "preds": preds_path.name,
-        "split": split,
-        "n": len(ids),
-        "n_missing": len(missing),          # gold ids without a prediction
-        "bertscore_f1": sum(x["f1"] for x in items) / max(len(items), 1),
-        "bertscore_p": sum(x["p"] for x in items) / max(len(items), 1),
-        "bertscore_r": sum(x["r"] for x in items) / max(len(items), 1),
-        "bertscore_model": BERTSCORE_MODEL,
-        "bertscore_rescale": BERTSCORE_RESCALE,
-        "date": dt.date.today().isoformat(),
-    }
+    def spy(cands, refs, **kw):           # the official score() runs once; keep its per-item output
+        p, r, f = orig(cands, refs, **kw)
+        seen.update(p=p.tolist(), r=r.tolist(), f=f.tolist())
+        return p, r, f
 
+    with tempfile.TemporaryDirectory() as tmp:
+        gold_path, pred_path = Path(tmp) / "gold.jsonl", Path(tmp) / "prediction.jsonl"
+        save_jsonl([{"id": i, "answer": {LANG: gold[i]["answer"]},
+                     **{k: gold[i][k] for k in ("country", "category", "subcategory") if gold[i].get(k)}}
+                    for i in ids], gold_path)
+        save_jsonl([{"id": i, "answer": preds[i].get("answer") or ""} for i in ids], pred_path)
+        scorer.score = spy
+        try:
+            res = bb.evaluate(str(gold_path), str(pred_path), split,
+                              submission_metadata=[{"name": bb.LANG_FIELD, "value": LANG}])
+        finally:
+            scorer.score = orig
+
+    nz = [k for k, i in enumerate(ids) if bb._clean(preds[i].get("answer"))]   # scored items, in id order
+    assert len(seen.get("f", [])) == len(nz), "official scorer call did not match the non-empty answers"
+    items = [{"id": i, "p": 0.0, "r": 0.0, "f1": 0.0} for i in ids]
+    for j, k in enumerate(nz):
+        items[k].update(p=seen["p"][j], r=seen["r"][j], f1=seen["f"][j])
+
+    block = res["submission_result"]
+    res.update({
+        "preds": preds_path.name, "split": split, "n": len(ids), "n_missing": n_missing,
+        "bertscore_f1": block[bb.M_F1], "bertscore_p": block[bb.M_P], "bertscore_r": block[bb.M_R],
+        "bleu": block[bb.M_BLEU], "rouge_l": block[bb.M_ROUGE], "coverage": block[bb.M_COV],
+        "bertscore_model": bb.HUB_MODEL, "bertscore_layer": bb.NUM_LAYERS,
+        "bertscore_revision": bb.HUB_REVISION, "date": dt.date.today().isoformat(),
+    })
     groups = {}
-    for i, x in zip(ids, items):
-        g = gold[i].get(group_by)
+    for x in items:
+        g = gold[x["id"]].get(group_by)
         if g is not None:
             groups.setdefault(g, []).append(x["f1"])
     if groups:
@@ -119,6 +125,5 @@ def evaluate(preds_path: str | Path, split: str = "dev", group_by: str = "catego
     RESULTS_DIR.mkdir(exist_ok=True)
     with open(RESULTS_DIR / f"{preds_path.stem}.json", "w") as f:
         json.dump(res, f, indent=2, ensure_ascii=False)
-    save_jsonl([{"id": i, **x} for i, x in zip(ids, items)],
-               preds_path.with_suffix(".scores.jsonl"))
+    save_jsonl(items, preds_path.with_suffix(".scores.jsonl"))
     return res

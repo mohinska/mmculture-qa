@@ -50,6 +50,13 @@ def load_jsonl(path: str | Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
+def require_answers(rows: list[dict], path: str | Path) -> None:
+    """Preds files must use the key `answer`. A row with answer None or "" is an empty answer."""
+    if rows and not any("answer" in r for r in rows):
+        raise ValueError(f"{path}: no row has an `answer` key; this is the old `pred` format. "
+                         "Convert it with the command in tasks/sdd/task-12-convert.md")
+
+
 def save_jsonl(rows: list[dict], path: str | Path, append: bool = False) -> None:
     """append=True: write after every batch so a crash does not lose results."""
     path = Path(path)
