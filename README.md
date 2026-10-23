@@ -137,13 +137,16 @@ Task 2 results on dev (official scorer). `-` = not run yet.
 
 Rows with different n are not directly comparable. To compare the Omni file with the others, score it on our 200 ids by filtering its rows to the ids of `load_split("qa", "dev", n=200, seed=0)`.
 
-Task 1 summary:
+Task 1 summary (dev, the same 200 ids for every row, official scorer):
 
 | System | dev BERTScore F1 | dev WER |
 |---|---:|---:|
-| Task 2 best so far: Qwen3-VL-4B-Instruct, `gold_style_v1`, n=200 | 0.791 | - |
-| Task 1: Whisper large-v3-turbo + Qwen3-VL-4B-Instruct (cascade), `gold_style_v1`, n=200 | - | 0.0069 (n=1000) |
-| Task 1: end-to-end | - | - |
+| Task 2 reference: Qwen3-VL-4B-Instruct, `gold_style_v1`, text question | 0.7914 | - |
+| Task 1 cascade: Whisper large-v3-turbo + Qwen3-VL-4B-Instruct, `gold_style_v1` | **0.7912** | 0.0092 (0.0069 on all 1000) |
+| Task 1 end-to-end: official Qwen2.5-Omni-3B baseline (4-bit), as published | 0.7382 | - |
+| Task 1 end-to-end: the same answers cut at the first newline (our post-processing) | 0.7547 | - |
+
+The Task 2 reference row was regenerated in the same Kaggle session as the cascade (0.7914 vs 0.7915 in the table above). The official end-to-end baseline does not stop after the answer: 163 of 200 answers continue with invented "Human:" turns until the token limit, hence the second row. Our `evaluate()` and the standalone official `score.py` give the same BERTScore-F1 on the cascade file (0.791222).
 
 ## Plan
 
