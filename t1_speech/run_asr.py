@@ -6,7 +6,7 @@ Resumable: ids already in the asr file are skipped.
 """
 import argparse
 
-from speech import DEFAULT_ASR, asr_summary, default_backend, run_asr
+from speech import DEFAULT_ASR, asr_summary, default_backend, run_asr, wer_refs
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--model", default=DEFAULT_ASR, help="key of ASR_MODELS in speech.py")
@@ -23,5 +23,5 @@ print("backend:", args.backend or default_backend())
 path = run_asr(args.split, model=args.model, n=args.n or None, seed=args.seed,
                backend=args.backend, initial_prompt=args.initial_prompt, tag=args.tag,
                batch_size=args.batch_size)
-if args.split != "test":
+if wer_refs(args.split):    # WER is our own analysis; splits without text questions get none
     print(asr_summary(path, args.split))
