@@ -1,0 +1,22 @@
+{
+  "submission_result": {
+    "BERTScore-F1": 0.754717,
+    "BERTScore-P": 0.723244,
+    "BERTScore-R": 0.791728,
+    "BLEU": 12.5602,
+    "ROUGE-L": 0.294047,
+    "Coverage": 1.0
+  },
+  "preds": "t1_speech_e2e_dev_en_Qwen2.5-Omni-3B_official+firstline.jsonl",
+  "split": "dev",
+  "n": 200,
+  "bertscore_f1": 0.754717,
+  "bertscore_p": 0.723244,
+  "bertscore_r": 0.791728,
+  "bleu": 12.5602,
+  "rouge_l": 0.294047,
+  "coverage": 1.0,
+  "scored_with": "official scorer/score.py (Colab), mmBERT-base layer 17",
+  "note": "same answers cut at the first newline (our post-processing): 163/200 answers continue with invented 'Human:' turns",
+  "date": "2026-10-24"
+}

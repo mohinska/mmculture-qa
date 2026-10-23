@@ -1,0 +1,22 @@
+{
+  "submission_result": {
+    "BERTScore-F1": 0.738242,
+    "BERTScore-P": 0.692212,
+    "BERTScore-R": 0.793168,
+    "BLEU": 9.8447,
+    "ROUGE-L": 0.25215,
+    "Coverage": 1.0
+  },
+  "preds": "t1_speech_e2e_dev_en_Qwen2.5-Omni-3B_official.jsonl",
+  "split": "dev",
+  "n": 200,
+  "bertscore_f1": 0.738242,
+  "bertscore_p": 0.692212,
+  "bertscore_r": 0.793168,
+  "bleu": 9.8447,
+  "rouge_l": 0.25215,
+  "coverage": 1.0,
+  "scored_with": "official scorer/score.py (Colab), mmBERT-base layer 17",
+  "note": "official baselines/baseline_qa_colab.ipynb, TASK=sqa, our 200 dev ids (seed 0); answers as generated",
+  "date": "2026-10-24"
+}
