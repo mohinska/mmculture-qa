@@ -199,10 +199,14 @@ def asr_summary(path: str | Path, split: str = "dev") -> dict:
     return res
 
 
-def cascade_inputs(asr_file: str | Path, split: str = "dev") -> list[dict]:
-    """qa rows with `question` replaced by the transcript; the original is kept in `question_text`."""
+def cascade_inputs(asr_file: str | Path, split: str = "dev",
+                   n: int | None = None, seed: int = 0) -> list[dict]:
+    """qa rows with `question` replaced by the transcript; the original is kept in `question_text`.
+
+    n, seed: same subset as load_split, so the ids match the T2_Text run.
+    """
     asr = {r["id"]: r["transcript"] for r in load_jsonl(asr_file)}
-    base = load_split("qa" if split_path("qa", split).exists() else "sqa", split)
+    base = load_split("qa" if split_path("qa", split).exists() else "sqa", split, n=n, seed=seed)
     return [{**r, "question_text": r.get("question"), "question": asr[r["id"]]}
             for r in base if r["id"] in asr]
 
