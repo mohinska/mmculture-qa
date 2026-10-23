@@ -1,0 +1,32 @@
+{
+  "result": [
+    {
+      "en": {
+        "BERTScore-F1": 0.787984,
+        "BERTScore-P": 0.777307,
+        "BERTScore-R": 0.801108,
+        "BLEU": 11.48,
+        "ROUGE-L": 0.328921,
+        "Coverage": 1.0
+      }
+    }
+  ],
+  "submission_result": {
+    "BERTScore-F1": 0.787984,
+    "BERTScore-P": 0.777307,
+    "BERTScore-R": 0.801108,
+    "BLEU": 11.48,
+    "ROUGE-L": 0.328921,
+    "Coverage": 1.0
+  },
+  "submission_metadata": {
+    "phase": "dev",
+    "language": "en",
+    "n_items": 200,
+    "n_empty": 0,
+    "duration_s": 13.1,
+    "f1_per_country": {
+      "?": 0.788
+    }
+  }
+}
