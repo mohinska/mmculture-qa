@@ -13,7 +13,11 @@ Write the answer in this style:
 
 Question: {question}"""
 
-PROMPTS = {"plain": "{question}", "gold_style_v1": GOLD_STYLE}
+# `official`: the instruction of the official Qwen2.5-Omni baseline. run_vlm.py builds that message
+# layout itself (question text, then this instruction as a separate item), so build_prompt() is not used for it.
+OFFICIAL = "Answer the question about the image in one or two sentences, in English. Give only the answer."
+
+PROMPTS = {"plain": "{question}", "gold_style_v1": GOLD_STYLE, "official": OFFICIAL}
 
 
 def build_prompt(question: str, prompt_id: str = "gold_style_v1") -> str:
