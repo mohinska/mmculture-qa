@@ -143,10 +143,12 @@ Task 1 summary (dev, the same 200 ids for every row, official scorer):
 |---|---:|---:|
 | Task 2 reference: Qwen3-VL-4B-Instruct, `gold_style_v1`, text question | 0.7914 | - |
 | Task 1 cascade: Whisper large-v3-turbo + Qwen3-VL-4B-Instruct, `gold_style_v1` | **0.7912** | 0.0092 (0.0069 on all 1000) |
+| Task 2 reference: Qwen3-VL-8B-Instruct, `gold_style_v1`, text question | 0.7881 | - |
+| Task 1 cascade: Whisper large-v3-turbo + Qwen3-VL-8B-Instruct, `gold_style_v1` | 0.7856 | 0.0092 |
 | Task 1 end-to-end: official Qwen2.5-Omni-3B baseline (4-bit), as published | 0.7382 | - |
 | Task 1 end-to-end: the same answers cut at the first newline (our post-processing) | 0.7547 | - |
 
-The Task 2 reference row was regenerated in the same Kaggle session as the cascade (0.7914 vs 0.7915 in the table above). The official end-to-end baseline does not stop after the answer: 163 of 200 answers continue with invented "Human:" turns until the token limit, hence the second row. Our `evaluate()` and the standalone official `score.py` give the same BERTScore-F1 on the cascade file (0.791222).
+The Task 2 reference rows were regenerated in the same Kaggle session as their cascade (0.7914 vs 0.7915 and 0.7881 vs 0.7880 in the table above). The official end-to-end baseline does not stop after the answer: 163 of 200 answers continue with invented "Human:" turns until the token limit, hence the second row. Our `evaluate()` and the standalone official `score.py` give the same BERTScore-F1 on the cascade file (0.791222).
 
 ## Plan
 
