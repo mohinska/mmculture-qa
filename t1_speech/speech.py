@@ -124,7 +124,9 @@ def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
     if backend == "hf":
         if initial_prompt:
             raise NotImplementedError("initial_prompt: use the mlx or ct2 backend")
-        gen = {} if repo.endswith(".en") else {"language": "en", "task": "transcribe"}
+        gen = {"num_beams": 1, "do_sample": False}
+        if not repo.endswith(".en"):
+            gen.update(language="en", task="transcribe")
         res = _hf_pipe(repo)(list(audio_paths), batch_size=batch_size, generate_kwargs=gen)
         return [r["text"].strip() for r in res]
 
