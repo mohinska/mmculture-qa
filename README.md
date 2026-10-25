@@ -150,6 +150,14 @@ Task 1 summary (dev, the same 200 ids for every row, official scorer):
 
 The Task 2 reference rows were regenerated in the same Kaggle session as their cascade (0.7914 vs 0.7915 and 0.7881 vs 0.7880 in the table above). The official end-to-end baseline does not stop after the answer: 163 of 200 answers continue with invented "Human:" turns until the token limit, hence the second row. Our `evaluate()` and the standalone official `score.py` give the same BERTScore-F1 on the cascade file (0.791222).
 
+ASR models on all 1000 dev clips (Kaggle T4, `hf` backend, same run settings for every model; whisper-large-v3 ran out of GPU memory and is planned again):
+
+| Whisper model | Parameters | Corpus WER | Questions transcribed exactly | Questions with a lost name |
+|---|---:|---:|---:|---:|
+| small.en | 244M | 0.90% | 90.6% | 19 |
+| medium.en | 769M | 0.70% | 92.3% | 16 |
+| **large-v3-turbo** (used in the cascade) | 809M | **0.69%** | **92.3%** | **15** |
+
 ## Plan
 
 ```mermaid
