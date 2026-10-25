@@ -1,0 +1,9 @@
+{
+  "asr": "dev_en_whisper-medium.en.jsonl",
+  "split": "dev",
+  "n": 1000,
+  "wer_corpus": 0.007,
+  "wer_mean": 0.0072,
+  "share_wer0": 0.923,
+  "share_wer_gt_0.25": 0.002
+}

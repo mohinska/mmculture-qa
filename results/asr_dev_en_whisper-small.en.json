@@ -1,0 +1,9 @@
+{
+  "asr": "dev_en_whisper-small.en.jsonl",
+  "split": "dev",
+  "n": 1000,
+  "wer_corpus": 0.009,
+  "wer_mean": 0.0094,
+  "share_wer0": 0.906,
+  "share_wer_gt_0.25": 0.002
+}
