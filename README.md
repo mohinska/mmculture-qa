@@ -118,12 +118,12 @@ Model choice is still open: zero-shot comparison on a 200-example dev subset is 
 
 | Component | Candidates | Where it runs |
 |---|---|---|
-| VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Colab / Kaggle GPU |
+| VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
 | ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper` on Apple Silicon, `faster-whisper` on CPU) or Kaggle GPU |
-| End-to-end audio model (Task 1) | Qwen2.5-Omni | Colab / Kaggle GPU |
-| Official reference baseline (not our model) | Qwen2.5-Omni-3B, 4-bit | Colab (`run_vlm.py`, prompt `official`) |
+| End-to-end audio model (Task 1) | Qwen2.5-Omni | Kaggle GPU |
+| Official reference baseline (not our model) | Qwen2.5-Omni-3B, 4-bit | Kaggle (`run_vlm.py`, prompt `official`) |
 
-Task 2 results on dev (official scorer). `-` = not run yet.
+Task 2 results on dev (official scorer).
 
 | Model | Prompt | n | BERTScore-F1 | BLEU | ROUGE-L | Coverage |
 |---|---|---:|---:|---:|---:|---:|
@@ -131,9 +131,9 @@ Task 2 results on dev (official scorer). `-` = not run yet.
 | Qwen3-VL-4B-Instruct | gold_style_v1 | 200 | **0.7915** | 11.57 | 0.324 | 1.0 |
 | Qwen3-VL-8B-Instruct | plain | 200 | 0.7252 | 3.55 | 0.211 | 1.0 |
 | Qwen3-VL-8B-Instruct | gold_style_v1 | 200 | 0.7880 | 11.48 | 0.329 | 1.0 |
-| Gemma 3 4B | plain | 200 | - | - | - | - |
-| Gemma 3 4B | gold_style_v1 | 200 | - | - | - | - |
-| Qwen2.5-Omni-3B (official reference baseline) | official | 1000 | - | - | - | - |
+| Gemma 3 4B | plain | 200 | 0.7070 | 3.22 | 0.204 | 1.0 |
+| Gemma 3 4B | gold_style_v1 | 200 | 0.7690 | 7.35 | 0.273 | 1.0 |
+| Qwen2.5-Omni-3B (official reference baseline) | official | 1000 | 0.7396 | 6.91 | 0.251 | 1.0 |
 
 Rows with different n are not directly comparable. To compare the Omni file with the others, score it on our 200 ids by filtering its rows to the ids of `load_split("qa", "dev", n=200, seed=0)`.
 
@@ -173,9 +173,9 @@ mmculture-qa/
 │       └── 00_EDA.ipynb  #   answer length / style, countries, categories
 ├── t2_text/              # Task 2, Textual VQA
 │   ├── prompts.py        #   build_prompt(), prompts: plain, gold_style_v1, official
-│   ├── run_vlm.py        #   VLM (Qwen3-VL, Gemma, Qwen2.5-Omni) on a split → preds/ (Colab / Kaggle, generation only)
+│   ├── run_vlm.py        #   VLM (Qwen3-VL, Gemma, Qwen2.5-Omni) on a split → preds/ (Kaggle, generation only)
 │   └── notebooks/
-│       ├── 01_baselines.ipynb       # zero-shot baselines: generation on Colab, scoring locally
+│       ├── 01_baselines.ipynb       # zero-shot baselines: generation on Kaggle, scoring locally
 │       └── 02_error_analysis.ipynb  # BERTScore by question type, length, worst answers
 ├── t1_speech/            # Task 1, Spoken VQA
 │   ├── speech.py         #   ASR (mlx / faster-whisper / hf backends), WER summary,
@@ -228,20 +228,17 @@ python shared/download_data.py [SPLITS ...] [--task {qa,sqa,all}] [--no-media] [
 
 ## Outputs
 
-| File | Fields |
+| File | What it is |
 |---|---|
-| `asr/{split}_en_{model}.jsonl` | `id, row_idx, lang, split, model, backend, transcript, wer` |
-| `preds/{task}_{split}_en_{model}_{prompt_id}.jsonl` | `id, answer, lang` (official submission row; task, split, model and prompt are in the file name) |
-| `preds/<same name>.scores.jsonl` | per-example official BERTScore: `id, p, r, f1` (0 for empty answers) |
-| `results/<same name>.json` | the official result (`submission_result`: `BERTScore-F1/P/R, BLEU, ROUGE-L, Coverage`) plus flat keys `preds, split, n, n_missing, bertscore_f1/p/r, bleu, rouge_l, coverage, bertscore_model, bertscore_layer, bertscore_revision, by_category (if gold has it), date` |
-| `results/asr_<asr file>.json` | `asr, split, n, wer_corpus, wer_mean, share_wer0, share_wer_gt_0.25` |
-| `results/t1_vs_t2_*.json / .png` | T1 vs T2 comparison from `12_speech_vs_text.ipynb` |
+| `preds/{task}_{split}_en_{model}_{prompt_id}.jsonl` | answers, one official submission row per line: `{"id", "answer", "lang"}`. Task, split, model and prompt are in the file name only. |
+| `preds/<same name>.scores.jsonl` | per-example official BERTScore: `id, p, r, f1` (0 for an empty answer) |
+| `results/<same name>.json` | the official result (`submission_result`) plus flat keys such as `bertscore_f1`, `n`, `preds` |
 
-`task` is one of `t1_speech_cascade`, `t1_speech_e2e`, `t2_text`. Scores come from the official scorer: `mmBERT-base` layer 17, no idf, no rescaling, empty answer = 0.
+`task` is one of `t1_speech_cascade`, `t1_speech_e2e`, `t2_text`. Scores come only from the official scorer (`mmBERT-base`, layer 17, no idf, no rescaling, empty answer = 0). Task 1 files (`asr/`, `results/asr_*.json`, `results/t1_vs_t2_*`) are described in `t1_speech/speech.py` and its notebooks.
 
 ## Scoring
 
-Scoring runs locally, in its own venv, apart from the VLM stack (the scorer needs torch >= 2.6; `requirements.txt` installs it on Apple Silicon Macs). Scoring needs an Apple-Silicon Mac, Linux, Colab or Kaggle: there are no torch 2.6 wheels for Intel Macs. The first run downloads about 1 GB of mmBERT weights. Use the venv from Setup.
+Scoring runs locally, in its own venv, apart from the VLM stack (the scorer needs torch >= 2.6; `requirements.txt` installs it on Apple Silicon Macs). Scoring needs an Apple-Silicon Mac or Linux: there are no torch 2.6 wheels for Intel Macs. The first run downloads about 1 GB of mmBERT weights. Use the venv from Setup.
 
 There is one scoring path: `evaluate(preds_path, "dev")` from `shared/metrics.py`, which the "Scoring" section of `t2_text/notebooks/01_baselines.ipynb` calls for every preds file. A preds file in the old `pred` format raises an error instead of being scored. An optional cell at the end of the notebook cross-checks the first file against the standalone `shared/official_scorer/score.py` (BERTScore-F1 should match to 4 decimals).
 
@@ -254,7 +251,7 @@ There is one scoring path: `evaluate(preds_path, "dev")` from `shared/metrics.py
 
 ## Running on Kaggle (generation only)
 
-Add `HF_TOKEN` in Add-ons → Secrets, then:
+The ready-made notebook is `t2_text/notebooks/01_baselines.ipynb` (import it in Kaggle: GPU T4 x2, Internet On, secret `HF_TOKEN`). Manually, with the secret `HF_TOKEN` added in Add-ons → Secrets:
 
 ```python
 import os
@@ -272,9 +269,5 @@ os.environ["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 ```
 
 Download `/kaggle/working/preds/` and score it locally (see Scoring).
-
-## Running on Colab (generation only)
-
-`t2_text/notebooks/01_baselines.ipynb` has the Colab setup (secret `HF_TOKEN`, clone, pinned `pip install`, `MMCQA_OUT=/content`) and run cells for Qwen2.5-Omni-3B (4-bit) and Gemma 3 4B on a T4. Download `/content/preds` and score it locally.
 
 `run_vlm.py` arguments: `--model` (HF id), `--prompt-id` (`plain` | `gold_style_v1` | `official`), `--split` (default `dev`; `devtest` works, no gold needed), `--n` (subset size, seed 0; default 200, `0` = full split), `--dtype` (`float16` default | `bfloat16` | `float32`), `--load-4bit` (bitsandbytes NF4), `--max-new-tokens` (default 96, 64 for Omni). For Qwen2.5-Omni (needs `qwen-omni-utils`, installed by `requirements.txt` on Linux) the official message layout is used and the prompt id is forced to `official`. It is resumable: rerun the same command after a crash.

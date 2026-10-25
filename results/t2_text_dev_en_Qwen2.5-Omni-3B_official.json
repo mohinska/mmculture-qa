@@ -1,0 +1,46 @@
+{
+  "result": [
+    {
+      "en": {
+        "BERTScore-F1": 0.739577,
+        "BERTScore-P": 0.691612,
+        "BERTScore-R": 0.797276,
+        "BLEU": 6.9132,
+        "ROUGE-L": 0.250641,
+        "Coverage": 1.0
+      }
+    }
+  ],
+  "submission_result": {
+    "BERTScore-F1": 0.739577,
+    "BERTScore-P": 0.691612,
+    "BERTScore-R": 0.797276,
+    "BLEU": 6.9132,
+    "ROUGE-L": 0.250641,
+    "Coverage": 1.0
+  },
+  "submission_metadata": {
+    "phase": "dev",
+    "language": "en",
+    "n_items": 1000,
+    "n_empty": 0,
+    "duration_s": 38.1,
+    "f1_per_country": {
+      "?": 0.7396
+    }
+  },
+  "preds": "t2_text_dev_en_Qwen2.5-Omni-3B_official.jsonl",
+  "split": "dev",
+  "n": 1000,
+  "n_missing": 0,
+  "bertscore_f1": 0.739577,
+  "bertscore_p": 0.691612,
+  "bertscore_r": 0.797276,
+  "bleu": 6.9132,
+  "rouge_l": 0.250641,
+  "coverage": 1.0,
+  "bertscore_model": "jhu-clsp/mmBERT-base",
+  "bertscore_layer": 17,
+  "bertscore_revision": "c5955035435e2bf121cde7f3c8863ef52ff35d82",
+  "date": "2026-10-24"
+}

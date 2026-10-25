@@ -1,0 +1,46 @@
+{
+  "result": [
+    {
+      "en": {
+        "BERTScore-F1": 0.707011,
+        "BERTScore-P": 0.641382,
+        "BERTScore-R": 0.789381,
+        "BLEU": 3.2191,
+        "ROUGE-L": 0.203758,
+        "Coverage": 1.0
+      }
+    }
+  ],
+  "submission_result": {
+    "BERTScore-F1": 0.707011,
+    "BERTScore-P": 0.641382,
+    "BERTScore-R": 0.789381,
+    "BLEU": 3.2191,
+    "ROUGE-L": 0.203758,
+    "Coverage": 1.0
+  },
+  "submission_metadata": {
+    "phase": "dev",
+    "language": "en",
+    "n_items": 200,
+    "n_empty": 0,
+    "duration_s": 10.3,
+    "f1_per_country": {
+      "?": 0.707
+    }
+  },
+  "preds": "t2_text_dev_en_gemma-3-4b-it_plain.jsonl",
+  "split": "dev",
+  "n": 200,
+  "n_missing": 800,
+  "bertscore_f1": 0.707011,
+  "bertscore_p": 0.641382,
+  "bertscore_r": 0.789381,
+  "bleu": 3.2191,
+  "rouge_l": 0.203758,
+  "coverage": 1.0,
+  "bertscore_model": "jhu-clsp/mmBERT-base",
+  "bertscore_layer": 17,
+  "bertscore_revision": "c5955035435e2bf121cde7f3c8863ef52ff35d82",
+  "date": "2026-10-24"
+}

@@ -24,9 +24,23 @@
     "language": "en",
     "n_items": 200,
     "n_empty": 0,
-    "duration_s": 19.6,
+    "duration_s": 10.6,
     "f1_per_country": {
       "?": 0.7252
     }
-  }
+  },
+  "preds": "t2_text_dev_en_Qwen3-VL-8B-Instruct_plain.jsonl",
+  "split": "dev",
+  "n": 200,
+  "n_missing": 800,
+  "bertscore_f1": 0.725242,
+  "bertscore_p": 0.661588,
+  "bertscore_r": 0.804494,
+  "bleu": 3.545,
+  "rouge_l": 0.210505,
+  "coverage": 1.0,
+  "bertscore_model": "jhu-clsp/mmBERT-base",
+  "bertscore_layer": 17,
+  "bertscore_revision": "c5955035435e2bf121cde7f3c8863ef52ff35d82",
+  "date": "2026-10-23"
 }
