@@ -30,6 +30,8 @@ ASR_MODELS = {
                                "hf": "openai/whisper-small.en"},
 }
 DEFAULT_ASR = "whisper-large-v3-turbo"
+ASR_SHORT = {"whisper-large-v3-turbo": "whisperturbo", "whisper-large-v3": "whisperlarge",
+             "whisper-medium.en": "whispermedium", "whisper-small.en": "whispersmall"}
 
 
 def _has(module: str) -> bool:
@@ -93,7 +95,7 @@ def _load_16k(path: str):
 def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
                backend: str | None = None, initial_prompt: str | None = None,
                batch_size: int = 16) -> list[str]:
-    """Audio files -> English transcripts, same order. Greedy decoding on all backends.
+    """Audio files -> English transcripts, same order. Greedy decoding without temperature fallback.
 
     initial_prompt: context text for the decoder, e.g. a list of place names
     (mlx and ct2 backends only).
@@ -106,7 +108,7 @@ def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
         out = []
         for p in audio_paths:
             r = mlx_whisper.transcribe(p, path_or_hf_repo=repo, language="en",
-                                       initial_prompt=initial_prompt, verbose=None)
+                                       initial_prompt=initial_prompt, temperature=0.0, verbose=None)
             out.append(r["text"].strip())
         return out
 
@@ -114,7 +116,7 @@ def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
         m = _ct2_model(repo)
         out = []
         for p in audio_paths:
-            segments, _ = m.transcribe(_load_16k(p), language="en", beam_size=1,
+            segments, _ = m.transcribe(_load_16k(p), language="en", beam_size=1, temperature=0.0,
                                        initial_prompt=initial_prompt)
             out.append("".join(s.text for s in segments).strip())
         return out
@@ -122,7 +124,9 @@ def transcribe(audio_paths: list[str], model: str = DEFAULT_ASR,
     if backend == "hf":
         if initial_prompt:
             raise NotImplementedError("initial_prompt: use the mlx or ct2 backend")
-        gen = {} if repo.endswith(".en") else {"language": "en", "task": "transcribe"}
+        gen = {"num_beams": 1, "do_sample": False}
+        if not repo.endswith(".en"):
+            gen.update(language="en", task="transcribe")
         res = _hf_pipe(repo)(list(audio_paths), batch_size=batch_size, generate_kwargs=gen)
         return [r["text"].strip() for r in res]
 
@@ -183,7 +187,7 @@ def asr_summary(path: str | Path, split: str = "dev") -> dict:
     recs = load_jsonl(path)
     refs = wer_refs(split)
     recs = [r for r in recs if r["id"] in refs]
-    per = [r["wer"] for r in recs]
+    per = [r.get("wer", wer_one(r["transcript"], refs[r["id"]])) for r in recs]
     res = {
         "asr": path.name,
         "split": split,
@@ -199,10 +203,18 @@ def asr_summary(path: str | Path, split: str = "dev") -> dict:
     return res
 
 
-def cascade_inputs(asr_file: str | Path, split: str = "dev") -> list[dict]:
-    """qa rows with `question` replaced by the transcript; the original is kept in `question_text`."""
+def cascade_inputs(asr_file: str | Path, split: str = "dev",
+                   n: int | None = None, seed: int = 0) -> list[dict]:
+    """qa rows with `question` replaced by the transcript; the original is kept in `question_text`.
+
+    n, seed: same subset as load_split, so the ids match the T2_Text run.
+    On test (no qa file) the sqa rows are used and `question_text` is None.
+    """
     asr = {r["id"]: r["transcript"] for r in load_jsonl(asr_file)}
-    base = load_split("qa" if split_path("qa", split).exists() else "sqa", split)
+    base = load_split("qa" if split_path("qa", split).exists() else "sqa", split, n=n, seed=seed)
+    missing = [r["id"] for r in base if r["id"] not in asr]
+    if missing:
+        print(f"cascade_inputs: {len(missing)} of {len(base)} ids have no transcript and are skipped")
     return [{**r, "question_text": r.get("question"), "question": asr[r["id"]]}
             for r in base if r["id"] in asr]
 
@@ -245,7 +257,7 @@ def join_t1_t2(asr_file, speech_preds, text_preds, split: str = "dev"):
         "country": gold[i].get("country"),
         "question": gold[i]["question"],
         "transcript": asr[i]["transcript"],
-        "wer": asr[i]["wer"],
+        "wer": asr[i].get("wer", wer_one(asr[i]["transcript"], gold[i]["question"])),
         "answer": gold[i]["answer"],
         "pred_text": tp[i],
         "pred_speech": sp[i],

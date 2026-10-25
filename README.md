@@ -12,7 +12,7 @@ Given an image and a question about it, generate a short open-ended answer. The 
 | **Task 2: Textual VQA** | image + text question | short text answer |
 
 - **Track:** English. The English data released so far covers the MENA region.
-- **Metric:** BERTScore F1 from the [official scorer](https://github.com/mmcultureqa-semeval27/mmcultureqa/tree/main/scorer) (`jhu-clsp/mmBERT-base`, layer 17). BLEU, ROUGE-L and coverage are reported too. For Spoken VQA we also track ASR word error rate (WER).
+- **Metric:** BERTScore F1 from the [official scorer](https://github.com/mmcultureqa-semeval27/mmcultureqa/tree/main/scorer) (`jhu-clsp/mmBERT-base`, layer 17). BLEU, ROUGE-L and coverage are reported too. For Spoken VQA we also track ASR word error rate (WER); this is our own metric (jiwer on Whisper-normalized text, `shared/metrics.py`), the official scorer has no WER.
 - **Evaluation:** CodaBench. The Dev-test leaderboard is open now. Test data is released 10.01.2027 and the evaluation period runs 10-31 January 2027.
 
 ## Team
@@ -118,10 +118,10 @@ Model choice is still open: zero-shot comparison on a 200-example dev subset is 
 
 | Component | Candidates | Where it runs |
 |---|---|---|
-| VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Kaggle GPU |
-| ASR (Task 1 cascade) | Whisper large-v3-turbo | Locally (`mlx-whisper` on Apple Silicon, `faster-whisper` on CPU) or Kaggle GPU |
-| End-to-end audio model (Task 1) | Qwen2.5-Omni | Kaggle GPU |
-| Official reference baseline (not our model) | Qwen2.5-Omni-3B, 4-bit | Kaggle (`run_vlm.py`, prompt `official`) |
+| VLM (Task 2, Task 1 cascade) | Qwen3-VL-8B-Instruct, Qwen3-VL-4B, Gemma 3 4B | Colab / Kaggle GPU |
+| ASR (Task 1 cascade) | Whisper large-v3-turbo | Kaggle / Colab GPU (`transformers`), or locally (`mlx-whisper` on Apple Silicon, `faster-whisper` on CPU) |
+| End-to-end audio model (Task 1) | Qwen2.5-Omni | Colab / Kaggle GPU |
+| Official reference baseline (not our model) | Qwen2.5-Omni-3B, 4-bit | Colab (`run_vlm.py`, prompt `official`) |
 
 Task 2 results on dev (official scorer).
 
@@ -137,13 +137,26 @@ Task 2 results on dev (official scorer).
 
 Rows with different n are not directly comparable. To compare the Omni file with the others, score it on our 200 ids by filtering its rows to the ids of `load_split("qa", "dev", n=200, seed=0)`.
 
-Task 1 summary:
+Task 1 summary (dev, the same 200 ids for every row, official scorer):
 
 | System | dev BERTScore F1 | dev WER |
 |---|---:|---:|
-| Task 2 best so far: Qwen3-VL-4B-Instruct, `gold_style_v1`, n=200 | 0.791 | - |
-| Task 1: Whisper + VLM (cascade) | - | - |
-| Task 1: end-to-end | - | - |
+| Task 2 reference: Qwen3-VL-4B-Instruct, `gold_style_v1`, text question | 0.7914 | - |
+| Task 1 cascade: Whisper large-v3-turbo + Qwen3-VL-4B-Instruct, `gold_style_v1` | **0.7912** | 0.0092 (0.0069 on all 1000) |
+| Task 2 reference: Qwen3-VL-8B-Instruct, `gold_style_v1`, text question | 0.7881 | - |
+| Task 1 cascade: Whisper large-v3-turbo + Qwen3-VL-8B-Instruct, `gold_style_v1` | 0.7856 | 0.0092 |
+| Task 1 end-to-end: official Qwen2.5-Omni-3B baseline (4-bit), as published | 0.7382 | - |
+| Task 1 end-to-end: the same answers cut at the first newline (our post-processing) | 0.7547 | - |
+
+The Task 2 reference rows were regenerated in the same Kaggle session as their cascade (0.7914 vs 0.7915 and 0.7881 vs 0.7880 in the table above). The official end-to-end baseline does not stop after the answer: 163 of 200 answers continue with invented "Human:" turns until the token limit, hence the second row. Our `evaluate()` and the standalone official `score.py` give the same BERTScore-F1 on the cascade file (0.791222).
+
+ASR models on all 1000 dev clips (Kaggle T4, `hf` backend, same run settings for every model; whisper-large-v3 ran out of GPU memory and is planned again):
+
+| Whisper model | Parameters | Corpus WER | Questions transcribed exactly | Questions with a lost name |
+|---|---:|---:|---:|---:|
+| small.en | 244M | 0.90% | 90.6% | 19 |
+| medium.en | 769M | 0.70% | 92.3% | 16 |
+| **large-v3-turbo** (used in the cascade) | 809M | **0.69%** | **92.3%** | **15** |
 
 ## Plan
 
@@ -181,9 +194,10 @@ mmculture-qa/
 │   ├── speech.py         #   ASR (mlx / faster-whisper / hf backends), WER summary,
 │   │                     #   cascade inputs, T1 vs T2 join
 │   ├── run_asr.py        #   Whisper on a split → asr/ + results/asr_*.json
+│   ├── run_cascade.py    #   transcripts + images → the T2 VLM → preds/ (generation only)
 │   └── notebooks/
 │       ├── 10_asr_whisper.ipynb      # ASR and WER
-│       ├── 11_cascade.ipynb          # Whisper + VLM cascade
+│       ├── 11_cascade.ipynb          # cascade + T2 twin + scoring (Kaggle / Colab)
 │       └── 12_speech_vs_text.ipynb   # T1 vs T2 comparison by WER bin
 ├── results/              # metrics (.json) for every run, data_stats.json from EDA
 ├── requirements.txt
@@ -249,6 +263,8 @@ There is one scoring path: `evaluate(preds_path, "dev")` from `shared/metrics.py
 3. `python shared/make_submission.py --preds preds/t2_text_devtest_en_<model>_<prompt>.jsonl` writes `submissions/<name>/prediction.zip` and runs the official format checker (`format OK` expected).
 4. Upload the zip to the Dev-test leaderboard with track `en`. n=200 subsets fail the id check by design: the checker needs every id of the split.
 
+Task 1 (cascade) uses the same steps with the speech data: `download_data.py devtest --task sqa`, then on Kaggle `run_asr.py --split devtest` and `run_cascade.py --split devtest --n 0`, then `make_submission.py --preds preds/t1_speech_cascade_devtest_en_<asr>+<model>_<prompt>.jsonl`. The id check reads the qa file, which is correct here: qa and sqa have the same ids on dev and devtest.
+
 ## Running on Kaggle (generation only)
 
 The ready-made notebook is `t2_text/notebooks/01_baselines.ipynb` (import it in Kaggle: GPU T4 x2, Internet On, secret `HF_TOKEN`). Manually, with the secret `HF_TOKEN` added in Add-ons → Secrets:
@@ -271,3 +287,16 @@ os.environ["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 Download `/kaggle/working/preds/` and score it locally (see Scoring).
 
 `run_vlm.py` arguments: `--model` (HF id), `--prompt-id` (`plain` | `gold_style_v1` | `official`), `--split` (default `dev`; `devtest` works, no gold needed), `--n` (subset size, seed 0; default 200, `0` = full split), `--dtype` (`float16` default | `bfloat16` | `float32`), `--load-4bit` (bitsandbytes NF4), `--max-new-tokens` (default 96, 64 for Omni). For Qwen2.5-Omni (needs `qwen-omni-utils`, installed by `requirements.txt` on Linux) the official message layout is used and the prompt id is forced to `official`. It is resumable: rerun the same command after a crash.
+
+## Task 1: ASR and cascade
+
+`t1_speech/notebooks/11_cascade.ipynb` runs the whole chain on Kaggle or Colab: Whisper on dev, the cascade, its T2_Text twin with the same model, prompt and ids, scoring with the official scorer, and a zip of `asr/`, `preds/` and `results/`. `12_speech_vs_text.ipynb` then runs locally on the downloaded files (no torch needed).
+
+```bash
+python t1_speech/run_asr.py --split dev
+python t1_speech/run_cascade.py --model Qwen/Qwen3-VL-4B-Instruct --prompt-id gold_style_v1 --n 200
+```
+
+`run_asr.py` arguments: `--model` (key of `ASR_MODELS` in `speech.py`, default `whisper-large-v3-turbo`), `--split`, `--n` (`0` = full split, default), `--seed` (default 0), `--backend` (`mlx` | `ct2` | `hf`, default: auto), `--initial-prompt` (decoder context, mlx / ct2 only), `--tag` (output name, required with `--initial-prompt`), `--batch-size`. The backend is `mlx` on Apple Silicon, `hf` on a CUDA GPU and `ct2` (faster-whisper, CPU) otherwise; all decode greedily. The `hf` backend reads audio with `ffmpeg`, preinstalled on Kaggle and Colab.
+
+`run_cascade.py` arguments: as `run_vlm.py` (`--model`, `--prompt-id` `plain` | `gold_style_v1`, `--split`, `--n`, `--dtype`, `--load-4bit`, `--max-new-tokens`) plus `--asr` (ASR run name, default `whisper-large-v3-turbo`). It writes `preds/t1_speech_cascade_{split}_en_{asr short}+{model}_{prompt}.jsonl`, e.g. `whisperturbo+Qwen3-VL-4B-Instruct_gold_style_v1`. Qwen2.5-Omni is refused: it takes the audio itself, which is the end-to-end setup.

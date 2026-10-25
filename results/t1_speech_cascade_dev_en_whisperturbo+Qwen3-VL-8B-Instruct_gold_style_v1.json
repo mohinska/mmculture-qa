@@ -1,0 +1,46 @@
+{
+  "result": [
+    {
+      "en": {
+        "BERTScore-F1": 0.785594,
+        "BERTScore-P": 0.77501,
+        "BERTScore-R": 0.798722,
+        "BLEU": 15.7479,
+        "ROUGE-L": 0.324327,
+        "Coverage": 1.0
+      }
+    }
+  ],
+  "submission_result": {
+    "BERTScore-F1": 0.785594,
+    "BERTScore-P": 0.77501,
+    "BERTScore-R": 0.798722,
+    "BLEU": 15.7479,
+    "ROUGE-L": 0.324327,
+    "Coverage": 1.0
+  },
+  "submission_metadata": {
+    "phase": "dev",
+    "language": "en",
+    "n_items": 200,
+    "n_empty": 0,
+    "duration_s": 12.6,
+    "f1_per_country": {
+      "?": 0.7856
+    }
+  },
+  "preds": "t1_speech_cascade_dev_en_whisperturbo+Qwen3-VL-8B-Instruct_gold_style_v1.jsonl",
+  "split": "dev",
+  "n": 200,
+  "n_missing": 800,
+  "bertscore_f1": 0.785594,
+  "bertscore_p": 0.77501,
+  "bertscore_r": 0.798722,
+  "bleu": 15.7479,
+  "rouge_l": 0.324327,
+  "coverage": 1.0,
+  "bertscore_model": "jhu-clsp/mmBERT-base",
+  "bertscore_layer": 17,
+  "bertscore_revision": "c5955035435e2bf121cde7f3c8863ef52ff35d82",
+  "date": "2026-10-24"
+}

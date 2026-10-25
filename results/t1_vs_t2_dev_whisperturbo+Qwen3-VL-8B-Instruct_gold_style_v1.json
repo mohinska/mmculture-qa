@@ -1,0 +1,14 @@
+{
+  "split": "dev",
+  "n": 200,
+  "n_speech": 200,
+  "n_text": 200,
+  "vqa": "Qwen3-VL-8B-Instruct",
+  "prompt_id": "gold_style_v1",
+  "asr": "whisper-large-v3-turbo",
+  "wer_corpus": 0.0092,
+  "f1_t2_text": 0.7881,
+  "f1_t1_speech_cascade": 0.7856,
+  "delta": -0.0025,
+  "share_speech_worse_by_0.02": 0.07
+}
