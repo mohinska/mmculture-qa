@@ -272,3 +272,7 @@ Score a preds file with `evaluate(preds_path, "dev")` from `shared/metrics.py` (
 
 1. Run the model on the split to submit (devtest or test) with `--n 0` (all items), see Running models.
 2. `python shared/make_submission.py --preds preds/<file>.jsonl` writes `submissions/<name>/prediction.zip` and runs the official format checker.
+
+## AI usage declaration
+
+We used Claude via Claude Code as a coding assistant for this project. All outputs were reviewed by the authors, who ran the experiments and are responsible for the results and the submission.
