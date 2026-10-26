@@ -1,6 +1,6 @@
 """Task 2 (image + text question): run a VLM on a split and write preds (no scoring here).
 
-Kaggle/Colab:  python t2_text/run_vlm.py --model Qwen/Qwen3-VL-4B-Instruct --n 5
+Kaggle:  python t2_text/run_vlm.py --model Qwen/Qwen3-VL-4B-Instruct --n 5
 Qwen2.5-Omni (official baseline layout, prompt id forced to `official`):
                python t2_text/run_vlm.py --model Qwen/Qwen2.5-Omni-3B --n 0 --load-4bit
 Resumable: ids already in the preds file are skipped. Needs no gold answers, so --split devtest works.

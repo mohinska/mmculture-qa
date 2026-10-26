@@ -3,7 +3,7 @@
 Same model loading, prompt and generation as answer_vlm() in t2_text/run_vlm.py;
 only the question comes from asr/ instead of the text file.
 
-Kaggle/Colab:  python t1_speech/run_cascade.py --model Qwen/Qwen3-VL-4B-Instruct --n 200
+Kaggle:  python t1_speech/run_cascade.py --model Qwen/Qwen3-VL-4B-Instruct --n 200
 Needs asr/{split}_en_{asr}.jsonl (python t1_speech/run_asr.py --split dev).
 Resumable: ids already in the preds file are skipped.
 """
