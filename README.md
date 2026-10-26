@@ -117,7 +117,9 @@ Comparing either one with Task 2 on the same examples shows how much is lost to 
 
 ## Baselines
 
-Zero-shot comparison on a 200-example dev subset: Qwen3-VL 4B and 8B and Gemma 3 4B all have predictions for both prompts, results below. Candidates:
+### Candidates
+
+All candidates are open-weight models that fit on a Kaggle T4 x2: **Qwen3-VL 4B and 8B** differ only in size and **Gemma 3 4B** is a different family of the same size as the 4B, so the comparison separates the effect of size from the effect of the model family. **Whisper large-v3-turbo** was the most accurate ASR we tried, and **Qwen2.5-Omni** is the open model that takes audio directly (the end-to-end setup) and the one used by the official baseline.
 
 | Component | Candidates |
 |---|---|
@@ -128,26 +130,26 @@ Zero-shot comparison on a 200-example dev subset: Qwen3-VL 4B and 8B and Gemma 3
 
 ### Task 2 results on `dev`
 
-| Model | Prompt | BERTScore-F1 | BLEU | ROUGE-L | Coverage |
-|---|---|---:|---:|---:|---:|
-| Qwen3-VL-4B-Instruct | plain | 0.7322 | 3.70 | 0.232 | 1.0 |
-| Qwen3-VL-4B-Instruct | gold_style_v1 | **0.7915** | 11.57 | 0.324 | 1.0 |
-| Qwen3-VL-8B-Instruct | plain | 0.7252 | 3.55 | 0.211 | 1.0 |
-| Qwen3-VL-8B-Instruct | gold_style_v1 | 0.7880 | 11.48 | 0.329 | 1.0 |
-| Gemma 3 4B | plain | 0.7070 | 3.22 | 0.204 | 1.0 |
-| Gemma 3 4B | gold_style_v1 | 0.7690 | 7.35 | 0.273 | 1.0 |
-| Qwen2.5-Omni-3B (official reference baseline, all 1000 dev) | official | 0.7396 | 6.91 | 0.251 | 1.0 |
+| Model | Prompt | BERTScore-F1 | BLEU | ROUGE-L |
+|---|---|---:|---:|---:|
+| Qwen3-VL-4B-Instruct | plain | 0.7322 | 3.70 | 0.232 |
+| Qwen3-VL-4B-Instruct | gold_style_v1 | **0.7915** | 11.57 | 0.324 |
+| Qwen3-VL-8B-Instruct | plain | 0.7252 | 3.55 | 0.211 |
+| Qwen3-VL-8B-Instruct | gold_style_v1 | 0.7880 | 11.48 | 0.329 |
+| Gemma 3 4B | plain | 0.7070 | 3.22 | 0.204 |
+| Gemma 3 4B | gold_style_v1 | 0.7690 | 7.35 | 0.273 |
+| Qwen2.5-Omni-3B (official baseline) | official | 0.7396 | 6.91 | 0.251 |
 
-### Task 1 results on `dev`:
+### Task 1 results on `dev`
 
-| System | dev BERTScore F1 | dev WER |
+| System | BERTScore-F1 | WER |
 |---|---:|---:|
 | Cascade: Whisper large-v3-turbo + Qwen3-VL-4B-Instruct, `gold_style_v1` | **0.7912** | 0.0092 (0.0069 on all 1000) |
 | Cascade: Whisper large-v3-turbo + Qwen3-VL-8B-Instruct, `gold_style_v1` | 0.7856 | 0.0092 |
 | End-to-end: official Qwen2.5-Omni-3B baseline (4-bit) | 0.7382 | - |
 | End-to-end: the same answers cut at the first newline (our post-processing) | 0.7547 | - |
 
-ASR models on `dev`:
+ASR models on `dev`
 
 | Whisper model | Parameters | Corpus WER | Questions transcribed exactly | Questions with a lost name |
 |---|---:|---:|---:|---:|
